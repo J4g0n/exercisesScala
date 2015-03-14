@@ -1,4 +1,6 @@
 
+import chapitre6.StateMachine
+
 import scala.{Option => _, Either => _, Right => _, Left=> _}
 
 trait Either[+E, +A] {
@@ -32,10 +34,10 @@ trait Either[+E, +A] {
 }
 case class Left[+E](get: E) extends Either[E,Nothing]
 case class Right[+A](get: A) extends Either[Nothing,A]
-
-
 val e1 = new Right[Int](5)
 val e2 = new Right[Int](3)
 val e3 = new Left[String]("Error")
 
 e1.map2 (e2) (_ + _)
+
+StateMachine.runMachine

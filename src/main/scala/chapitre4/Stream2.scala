@@ -3,8 +3,8 @@ package chapitre4
 import scala.annotation.tailrec
 
 trait Stream2[+A] {
-  def toListRecursive: List[A] = this match {
-    case Cons(h, t) => h() :: t().toListRecursive
+  def toList: List[A] = this match {
+    case Cons(h, t) => h() :: t().toList
     case _ => List()
   }
 
@@ -71,8 +71,32 @@ trait Stream2[+A] {
       case _ => None
     }
 
+  def zipAll[B](s2: Stream2[B]): Stream2[(Option[A],Option[B])] =
+    zipWithAll(s2)((_,_))
+
+  def zipWithAll[B, C](s2: Stream2[B])(f: (Option[A], Option[B]) => C): Stream2[C] =
+    Stream2.unfold((this, s2)) {
+      case (Empty, Empty) => None
+      case (Cons(h, t), Empty) => Some(f(Some(h()), None) -> (t(), Empty))
+      case (Empty, Cons(h, t)) => Some(f(None, Some(h())) -> (Empty, t()))
+      case (Cons(h1, t1), Cons(h2, t2)) => Some(f(Some(h1()), Some(h2())) -> (t1(), t2()))
+    }
+
+  def startsWith[A](s: Stream2[A]): Boolean =
+    zipAll(s).takeWhile(_._2.isDefined) forAll {
+      case (h,h2) => h == h2
+    }
+
   def zip[B](s2: Stream2[B]): Stream2[(A,B)] =
     zipWith(s2)((_,_))
+
+  def tails: Stream2[Stream2[A]] =
+    Stream2.unfold (this) {
+      case Cons(hd, tl) => Some(Stream2.cons(hd(), tl()) -> tl())
+      case _ => None
+    }
+
+  def scanRight[B](z: B)(f: (A,A) => B): Stream2[B] = ???
 
   override def toString = this match {
     case Cons(hd, tl) => "Cons(" + hd() + ", ?)"
@@ -116,6 +140,9 @@ object Stream2 {
 
   def fibsUsingUnfold(n0: Int, n1: Int): Stream2[Int] =
     unfold ((n0, n1)) { case (v0, v1) => Some((v0, (v1, v0 + v1))) }
+
+  def hasSubsequence[A](s1: Stream[A], s2: Stream[A]): Boolean =
+    s1.tails exists (_.startsWith(s2))
 
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream2[A] = {
     f(z) match {
